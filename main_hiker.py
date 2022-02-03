@@ -73,8 +73,9 @@ def run_replicate(initial_point, find_point, map_data, T, p_behavior, alpha, LL)
     # icy[1] = icy[0] + (math.floor(3 * 1) - 1)
 
     # initialize position matrix
-    x, y, behavior = np.empty((1, T + 2), dtype='int'), np.empty((1, T + 2), dtype='int'), np.empty((1, T + 2),
-                                                                                                    dtype='int')
+    # x, y, behavior = np.empty((1, T + 2), dtype='int'), np.empty((1, T + 2), dtype='int'), np.empty((1, T + 2),
+    #                                                                                                 dtype='int')
+    x, y, behavior = np.empty((1, T + 2)), np.empty((1, T + 2)), np.empty((1, T + 2))
     x[:], y[:], behavior[:] = np.NaN, np.NaN, np.NaN
     x[0, 0] = icx[0]
     y[0, 0] = icy[0]
@@ -103,13 +104,15 @@ def run_replicate(initial_point, find_point, map_data, T, p_behavior, alpha, LL)
         if flag == 1:
             break
 
-        if counter % k == 1:
-            # choose motion based on type of person from p_behavior
-            behavior[0, ii] = randsmpl(p_behavior)
-        else:
-            behavior[0, ii] = behavior[0, ii-1]
+        # Testing Temporal Decision Points
+        # if counter % k == 1:
+        #     # choose motion based on type of person from p_behavior
+        #     behavior[0, ii] = randsmpl(p_behavior)
+        # else:
+        #     behavior[0, ii] = behavior[0, ii-1]
+        #
+        # counter = counter + 1
 
-        counter = counter + 1
         # initialize staying put flag
         flag_sp = 0
 
@@ -285,7 +288,7 @@ def run_replicate(initial_point, find_point, map_data, T, p_behavior, alpha, LL)
             flag = 1
 
         #### check if provisional update is inaccessible, stay put if it is
-        if flag == 0 and map_data[0][y[0, ii + 1], x[0, ii + 1]] == 1:
+        if flag == 0 and map_data[0][int(y[0, ii + 1]), int(x[0, ii + 1])] == 1:
             x[0, ii + 1] = x[0, ii]
             y[0, ii + 1] = y[0, ii]
 
@@ -309,19 +312,19 @@ def run_replicate(initial_point, find_point, map_data, T, p_behavior, alpha, LL)
 if __name__ == '__main__':
     # input in parameters for debugging
 
-    nICs = 3                            # initial conditions
+    nICs = 1                            # initial conditions
     icsFile = "InitialConditions.csv"   # file of ICs to run in lat/lon
     icsMFile = "ConvertedConditions.csv" # ICs converted to meters
-    probsFile = 'beh_dist_6.csv'          # file of probabilities to run 'beh_dist_6.csv'
+    probsFile = 'test6beh.csv'          # file of probabilities to run 'beh_dist_6.csv'
     LLx = 3000                          # extent of map
     LLy = 3000                          # extent of map
-    nBehaviors = 462                      # behavior combinations
-    reps = 10                           # repetitions
+    nBehaviors = 6                      # behavior combinations
+    reps = 50                           # repetitions
     ts = 850                            # time steps - walking speed (850)
-    simT = 3                            # simulation length in hours
+    simT = 100                            # simulation length in hours
     alpha = 0.55                        # smoothing parameter
-    save_flag = True                    # save files
-    plot_flag = False                   # plot files
+    save_flag = False                    # save files
+    plot_flag = True                   # plot files
 
     print("# ICs: %i " % nICs)
     print("Input Initial Conditions (lat/lon): %s" % icsFile)

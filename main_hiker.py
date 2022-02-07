@@ -6,6 +6,8 @@ import random
 from numpy import linalg as LA
 import pickle
 import time
+from joblib import Parallel, delayed
+import multiprocessing
 
 def randsmpl(p):
     # from uniform 0-1 rv, find last bin it fits in, return index
@@ -319,11 +321,11 @@ if __name__ == '__main__':
     LLx = 3000                          # extent of map
     LLy = 3000                          # extent of map
     nBehaviors = 6                      # behavior combinations
-    reps = 50                           # repetitions
+    reps = 5                           # repetitions
     ts = 850                            # time steps - walking speed (850)
     simT = 100                            # simulation length in hours
     alpha = 0.55                        # smoothing parameter
-    save_flag = False                    # save files
+    save_flag = True                    # save files
     plot_flag = True                   # plot files
 
     print("# ICs: %i " % nICs)
@@ -361,25 +363,34 @@ if __name__ == '__main__':
         alldata = [[[], [], []] for _ in range(nBehaviors)]
 
         # map matrices for Elevation, Inac, LF
-        fnInac = "mapdata/BWInac_" + str(icsname[iic]) + ".csv"
-        fnLF = "mapdata/BWLF_" + str(icsname[iic]) + ".csv"
-        fnElev = "mapdata/Elev_" + str(icsname[iic]) + ".csv"
+        fnInac = "./mapdata/BWInac_" + str(icsname[iic]) + ".csv"
+        fnLF = "./mapdata/BWLF_" + str(icsname[iic]) + ".csv"
+        fnElev = "./mapdata/Elev_" + str(icsname[iic]) + ".csv"
         BWInac = np.loadtxt(fnInac, delimiter=',')
         BWLF = np.loadtxt(fnLF, delimiter=',')
         Elev = np.loadtxt(fnElev, delimiter=',')
         map_data = (BWInac, BWLF, Elev)
+        alltrajectories = {}
 
         for iprob in range(0, nBehaviors):
             p_behavior = probs[iprob,]
             allX, allY, allbeh = np.empty((1, 0), dtype='int'), np.empty((1, 0), dtype='int'), np.empty((1, 0),dtype='int')
             print("IC %d and prob %d" % (iic, iprob))
+            repdict = {}
+
             for irep in range(0, reps + 1):
+            # def parrep(irep):
                 print(irep)
                 [x, y, behavior] = run_replicate(initial_point, find_point, map_data, T, p_behavior, alpha, LL)
                 allX = np.append(allX, x)
                 allY = np.append(allY, y)
                 allbeh = np.append(allbeh, behavior)
+                repdict[("rep"+str(irep))] = {"x": x, "y": y, "behavior": behavior}
+
+
+            # Parallel(n_jobs=-1, verbose=10)(delayed(parrep)(irep) for irep in range(0, reps + 1))
             alldata[iprob] = [allX, allY, allbeh]
+            alltrajectories[("prob" + str(iprob))] = repdict
 
             # save each probability's trajectory to load into matlab
             if save_flag:
@@ -389,12 +400,14 @@ if __name__ == '__main__':
         # save alldata for each IC
         if save_flag:
             fnic = "sims/all_" + str(icsname[iic]) + "_t" + str(simT) + ".pkl"
+            fnic1 = "sims/alld_" + str(icsname[iic]) + "_t" + str(simT)
             with open(fnic, 'wb') as f:
                 pickle.dump(alldata, f)
             with open(fnic,'rb') as f:
                 loadalldata = pickle.load(f)
             # check that they're the same
             print(np.array_equal(alldata,loadalldata))
+            np.save(fnic1,alltrajectories)
 
         # visualize the trajectories
         if plot_flag:

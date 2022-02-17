@@ -294,9 +294,6 @@ def run_replicate(initial_point, find_point, map_data, T, p_behavior, alpha, LL)
             x[0, ii + 1] = x[0, ii]
             y[0, ii + 1] = y[0, ii]
 
-    # x = x';
-    # y = y';
-    # behavior = behavior';
 
     # find the end points not equal to nan
     # ind_end = np.argwhere(~np.isnan(x.flatten()))
@@ -317,16 +314,16 @@ if __name__ == '__main__':
     nICs = 1                            # initial conditions
     icsFile = "InitialConditions.csv"   # file of ICs to run in lat/lon
     icsMFile = "ConvertedConditions.csv" # ICs converted to meters
-    probsFile = 'test6beh.csv'          # file of probabilities to run 'beh_dist_6.csv'
+    probsFile = 'beh_dist_6.csv'          # file of probabilities to run 'beh_dist_6.csv'
     LLx = 3000                          # extent of map
     LLy = 3000                          # extent of map
-    nBehaviors = 6                      # behavior combinations
-    reps = 5                           # repetitions
+    nBehaviors = 462                      # behavior combinations
+    reps = 10                           # repetitions
     ts = 850                            # time steps - walking speed (850)
     simT = 100                            # simulation length in hours
     alpha = 0.55                        # smoothing parameter
     save_flag = True                    # save files
-    plot_flag = True                   # plot files
+    plot_flag = False                   # plot files
 
     print("# ICs: %i " % nICs)
     print("Input Initial Conditions (lat/lon): %s" % icsFile)
@@ -378,40 +375,29 @@ if __name__ == '__main__':
             print("IC %d and prob %d" % (iic, iprob))
             repdict = {}
 
-            for irep in range(0, reps + 1):
-            # def parrep(irep):
+            # for irep in range(0, reps + 1):
+            def parrep(irep):
                 print(irep)
                 [x, y, behavior] = run_replicate(initial_point, find_point, map_data, T, p_behavior, alpha, LL)
-                allX = np.append(allX, x)
-                allY = np.append(allY, y)
-                allbeh = np.append(allbeh, behavior)
                 repdict[("rep"+str(irep))] = {"x": x, "y": y, "behavior": behavior}
+                return repdict
+            alltrajectories[("prob" + str(iprob))] = Parallel(n_jobs=-1, verbose=10)(delayed(parrep)(irep) for irep in range(0, reps + 1))
+            print("done")
 
-
-            # Parallel(n_jobs=-1, verbose=10)(delayed(parrep)(irep) for irep in range(0, reps + 1))
-            alldata[iprob] = [allX, allY, allbeh]
-            alltrajectories[("prob" + str(iprob))] = repdict
-
-            # save each probability's trajectory to load into matlab
-            if save_flag:
-                fnprob = "sims/sim_" + str(icsname[iic]) + "_t" + str(simT) + "_p" + str(iprob) + ".csv"
-                np.savetxt(fnprob, alldata[iprob])
+            # # save each probability's trajectory to load into matlab
+            # if save_flag:
+            #     fnprob = "sims/sim_" + str(icsname[iic]) + "_t" + str(simT) + "_p" + str(iprob) + ".csv"
+            #     np.savetxt(fnprob, alldata[iprob])
 
         # save alldata for each IC
         if save_flag:
             fnic = "sims/all_" + str(icsname[iic]) + "_t" + str(simT) + ".pkl"
             fnic1 = "sims/alld_" + str(icsname[iic]) + "_t" + str(simT)
-            with open(fnic, 'wb') as f:
-                pickle.dump(alldata, f)
-            with open(fnic,'rb') as f:
-                loadalldata = pickle.load(f)
-            # check that they're the same
-            print(np.array_equal(alldata,loadalldata))
             np.save(fnic1,alltrajectories)
 
         # visualize the trajectories
         if plot_flag:
-            visualization(alldata, reps, T, probs)
+            visualization(alltrajectories, reps, T, probs)
             plt.show()
     print("------- total time = {} seconds ------".format(time.time() - start_time))
 
